@@ -293,24 +293,86 @@ subroutine Cal_initial(atom_i,N,K,C,D,T,S,S_size,S_label)
     integer :: N,K,atom_i,j,kk,temp
     !integer:: min_indx(N),max_indx(N)
     integer :: max_indx(1),min_indx(1)
-    double precision :: dist_min(N), dist_tmp(N), L(K)
-    double precision, dimension(K, N) :: dist
+    double precision :: dist(N),dist1(N),dist2(N),dist3(N),dist4(N),dist5(N),dist6(N),dist7(N),L(K)
 
-    do kk=1,K
+        T(1)=atom_i
+        ! calculate dist from atom i to all atoms
+        dist=Cal_dist(lamb,T(1),N,K,C,D)
+        max_indx = maxloc(dist(1:N) ) 
+
+        T(2)=max_indx(1)
+        dist1=Cal_dist(lamb,T(1),N,K,C,D)
+        dist2=Cal_dist(lamb,T(2),N,K,C,D)
         do j=1,N
-            dist(kk,j) = 0.0d0
+        dist(j)=minval((/dist1(j), dist2(j)/))
         enddo
-    enddo
-    T(1) = atom_i
-    do kk=1,K-1
-        dist_tmp = Cal_dist(lamb,T(kk),N,K,C,D)
+        max_indx=maxloc(dist(1:N))
+
+        T(3)=max_indx(1)
+        dist1=Cal_dist(lamb,T(1),N,K,C,D)
+        dist2=Cal_dist(lamb,T(2),N,K,C,D)
+        dist3=Cal_dist(lamb,T(3),N,K,C,D)
         do j=1,N
-            dist(kk,j) = dist_tmp(j)
+        dist(j)=minval((/dist1(j), dist2(j), dist3(j)/))
         enddo
-        dist_min = minval(dist, DIM=1)
-        max_indx = maxloc(dist_min(1:N))
-        T(kk+1) = max_indx(1)
-    enddo
+       
+        max_indx=maxloc(dist(1:N))
+
+        
+
+
+        T(4)=max_indx(1)
+        dist1=Cal_dist(lamb,T(1),N,K,C,D)
+        dist2=Cal_dist(lamb,T(2),N,K,C,D)
+        dist3=Cal_dist(lamb,T(3),N,K,C,D)
+        dist4=Cal_dist(lamb,T(4),N,K,C,D)
+        do j=1,N
+        dist(j)=minval((/dist1(j),dist2(j),dist3(j),dist4(j)/))
+        enddo
+    
+        max_indx=maxloc(dist(1:N))
+
+        T(5)=max_indx(1)
+        dist1=Cal_dist(lamb,T(1),N,K,C,D)
+        dist2=Cal_dist(lamb,T(2),N,K,C,D)
+        dist3=Cal_dist(lamb,T(3),N,K,C,D)
+        dist4=Cal_dist(lamb,T(4),N,K,C,D)
+        dist5=Cal_dist(lamb,T(5),N,K,C,D)
+        do j=1,N
+        dist(j)=minval((/dist1(j),dist2(j),dist3(j),dist4(j),dist5(j)/))
+        enddo
+       
+        max_indx=maxloc(dist(1:N))
+
+
+        T(6)=max_indx(1)
+        dist1=Cal_dist(lamb,T(1),N,K,C,D)
+        dist2=Cal_dist(lamb,T(2),N,K,C,D)
+        dist3=Cal_dist(lamb,T(3),N,K,C,D)
+        dist4=Cal_dist(lamb,T(4),N,K,C,D)
+        dist5=Cal_dist(lamb,T(5),N,K,C,D)
+        dist6=Cal_dist(lamb,T(6),N,K,C,D)
+        do j=1,N
+        dist(j)=minval((/dist1(j),dist2(j),dist3(j),dist4(j),dist5(j),dist6(j)/))
+        enddo
+        
+        max_indx=maxloc(dist(1:N))
+
+        T(7)=max_indx(1)
+        dist1=Cal_dist(lamb,T(1),N,K,C,D)
+        dist2=Cal_dist(lamb,T(2),N,K,C,D)
+        dist3=Cal_dist(lamb,T(3),N,K,C,D)
+        dist4=Cal_dist(lamb,T(4),N,K,C,D)
+        dist5=Cal_dist(lamb,T(5),N,K,C,D)
+        dist6=Cal_dist(lamb,T(6),N,K,C,D)
+        dist7=Cal_dist(lamb,T(7),N,K,C,D)
+        do j=1,N
+        dist(j)=minval((/dist1(j),dist2(j),dist3(j),dist4(j),dist5(j),dist6(j),dist7(j)/))
+        enddo
+        
+        max_indx=maxloc(dist(1:N))
+
+        T(8)=max_indx(1)
 
     do j=1,N
         do kk=1,K
