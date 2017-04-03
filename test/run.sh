@@ -1,5 +1,7 @@
 #!/bin/bash
 
-suffix=newinitial_debug
+suffix=newinitial
 ifort -p -o Kmeans_$suffix ../RC_Kmeans_$suffix.f90
-#./Kmeans_$suffix
+cd $suffix
+rm -f *.txt
+../Kmeans_$suffix

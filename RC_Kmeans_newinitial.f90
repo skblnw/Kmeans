@@ -1,6 +1,6 @@
 program Kmean
 
-integer,parameter :: K=8, N=115,M=10
+integer,parameter :: K=8, N=115,M=1
 double precision :: lamb = 0 !0
 double precision,parameter :: a = 0.0001 !0.000025
 !double precision :: lamb
@@ -189,14 +189,14 @@ subroutine Output_Data(lamb,atom_i,K,N,S, S_size, fname)
 
     open(11,file=fname,form="formatted",access="append" )
     write(11,*) "lambda=", lamb
-    write(11,*) "i=", i
+    write(11,*) "i=", atom_i
     write(11,*) "WCSS=", WCSS
     do k_iter =1, K 
         write(11,*) "S=", S(1: S_size(k_iter) ,   k_iter  )
     end do 
     close(11)
 
-end subroutine  Output_Data  
+end subroutine  Output_Data
 
 subroutine Output_FWCSS(lamb,K,N,FWCSS,Min_WCSS,S, S_size, fname)
     integer , intent(in) :: N,K
@@ -296,18 +296,18 @@ subroutine Cal_initial(atom_i,N,K,C,D,T,S,S_size,S_label)
     double precision :: dist_min(N), dist_tmp(N), L(K)
     double precision, dimension(K, N) :: dist
 
-    do kk=1,K
-        do j=1,N
-            dist(kk,j) = 0.0d0
-        enddo
-    enddo
+    ! do kk=1,K
+    !     do j=1,N
+    !         dist(kk,j) = 0.0d0
+    !     enddo
+    ! enddo
     T(1) = atom_i
     do kk=1,K-1
         dist_tmp = Cal_dist(lamb,T(kk),N,K,C,D)
         do j=1,N
             dist(kk,j) = dist_tmp(j)
+            dist_min(j) = minval(dist(1:kk,j))
         enddo
-        dist_min = minval(dist, DIM=1)
         max_indx = maxloc(dist_min(1:N))
         T(kk+1) = max_indx(1)
     enddo
