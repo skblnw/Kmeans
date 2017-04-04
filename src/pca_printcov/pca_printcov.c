@@ -65,7 +65,7 @@ int rdpara(int argc, char *argv[], FILE **fp)
     {
       fp[9] = fopen(argv[++i], "w");
     }
-    else if (strcmp(argv[i], "-rco") == 0)
+    else if (strcmp(argv[i], "-ocd") == 0)
     {
       fp[10] = fopen(argv[++i], "w");
     }
@@ -75,8 +75,9 @@ int rdpara(int argc, char *argv[], FILE **fp)
 
 int main(int argc, char *argv[])
 {
- FILE *iref, *itrj, *imas, *ipar, *orms, *oave, *oval, *ocfl, *ovec, *ocov, *fp[20];
- FILE *orco; // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2)
+ FILE *iref, *itrj, *imas, *ipar, *orms, *oave, *oval, *ocfl, *ovec, *fp[20];
+// FILE *orco; // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2)
+ FILE *ocov, *ocod;
  int i, j, k, l, m, n, d, nn, nfram, natm, nvec;
  long int ndim, il, iu, lm, lwork, liwork, info, *isuppz, *iwork;
  double rms, trace, vl, vu, abstol, cfl, *mass=NULL, *cov, *val, *vec, *work;
@@ -87,7 +88,7 @@ int main(int argc, char *argv[])
 
  if (argc == 1 || strcmp(argv[1], "-h") == 0)
  {
-   fprintf(stderr, "usage: %s -irf REF -itj TRJ -imw mass -ipr control parameters -ors RMSD -oav AVE -ova eigenvalues -ocf cumulative fluctuations -ove eigenvectors -cov covariance_matrix -rco r_cov_matrix\n", argv[0]);
+   fprintf(stderr, "usage: %s -irf REF -itj TRJ -imw mass -ipr control parameters -ors RMSD -oav AVE -ova eigenvalues -ocf cumulative fluctuations -ove eigenvectors -cov covariance_matrix -ocd cov_atom_distance\n", argv[0]);
    exit(1);
  }
 
@@ -102,7 +103,7 @@ int main(int argc, char *argv[])
  ocfl = fp[7];
  ovec = fp[8];
  ocov = fp[9];
- orco = fp[10];
+ ocod = fp[10];
 
 /* control parameters */
  fgets2(str, STRLEN, ipar); // one-line statement of the file
@@ -130,10 +131,11 @@ int main(int argc, char *argv[])
  snew(xref, natm);
  snew(x, natm);
  snew(xave, natm);
- snew(rave, natm); // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2)
+// snew(rave, natm); // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2)
  snew(val, ndim);
  snew(cov, ndim*ndim);
- snew(rcov, natm*natm); // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2)
+// snew(rcov, natm*natm); // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2)
+ snew(covd, natm*natm);
  snew(vec, ndim*nvec);
  snew(mass, natm);
  snew(isuppz, 2*nvec);
@@ -175,7 +177,7 @@ int main(int argc, char *argv[])
     for (i=0; i<natm; i++)
     {
        /* add r to average structure, // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2) */
-       rave[i] += sqrt(x[i][0]*x[i][0] + x[i][1]*x[i][1] + x[i][2]*x[i][2]); 
+//       rave[i] += sqrt(x[i][0]*x[i][0] + x[i][1]*x[i][1] + x[i][2]*x[i][2]); 
 
        /* add positions to average structure */
        for (m=0; m<DIM; m++)
@@ -218,7 +220,7 @@ int main(int argc, char *argv[])
 /* divide average by number of frames */
  for (i=0; i<natm; i++)
  {
-    rave[i] /= nfram; // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2)
+//    rave[i] /= nfram; // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2)
     for (m=0; m<DIM; m++)
     {
        xave[i][m] /= nfram;
@@ -271,6 +273,7 @@ int main(int argc, char *argv[])
        fprintf(ocov, "%15.9lf ", cov[ndim*j+i]);
     }
     fprintf(ocov, "\n");
+    fflush(ocov);
  }
 
 /* write the r covariance matrix, // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2) */
@@ -350,7 +353,7 @@ int main(int argc, char *argv[])
  fclose(ocfl);
  fclose(ovec);
  fclose(ocov);
- fclose(orco); // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2)
+ fclose(ocod); // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2)
 
 /* the end of main */
  return 0;
