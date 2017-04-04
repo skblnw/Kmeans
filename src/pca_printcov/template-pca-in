@@ -1,0 +1,7 @@
+#control parameters of PCA. (The comments lines cannot be removed)
+#Number of configurations in the trajectory file
+NFRAME
+#Number of atoms in the system
+725
+#Number of PCA modes we want to get
+2175

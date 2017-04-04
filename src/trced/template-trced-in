@@ -1,0 +1,5 @@
+#Control parameters.
+#Number of atoms in the system
+725
+#Number of essential PCA modes
+NPCA

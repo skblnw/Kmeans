@@ -1,0 +1,14 @@
+#!/bin/csh -f
+
+#setenv clapack /uufs/hec.utah.edu/common/cbmsfs/u0561890/bin/lib/CLAPACK/
+setenv  clapack /share/apps/CLAPACK-3.2.1
+
+setenv F2CLIB     ${clapack}/F2CLIBS/libf2c.a
+setenv LAPACKLIB  ${clapack}/lapack_LINUX.a
+setenv BLASLIB    ${clapack}/blas_LINUX.a
+setenv TMGLIB     ${clapack}/tmglib_LINUX.a
+#
+icc -c *.c
+icc -o pca_printcov *.o ${LAPACKLIB} ${F2CLIB} ${BLASLIB} ${TMGLIB} -lm -Wall
+#
+rm *.o
