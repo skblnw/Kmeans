@@ -287,6 +287,7 @@ int main(int argc, char *argv[])
 // }
  
 /* write the atom separation matrix */
+/* Size of covd.dat will be (natm+1)*natm/2
  for(i=0;i<natm;i++)
 {
   for(j=i; j<natm ;j++)
