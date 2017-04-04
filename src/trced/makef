@@ -1,0 +1,6 @@
+#!/bin/csh -f
+
+icc -c *.c
+icc -o trced *.o 
+#
+rm *.o

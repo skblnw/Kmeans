@@ -1,6 +1,6 @@
 program Kmean
 
-integer,parameter :: K=8, N=115, M=1
+integer,parameter :: K=8, N=725, M=1
 double precision :: lamb = 0 !0
 double precision,parameter :: a = 0.0001 !0.000025
 !double precision :: lamb
@@ -450,7 +450,7 @@ function Cal_dist2mean(i,k_iter, lamb, K,N,C,D, S, S_Size) result(dist)
 
     ss= S_size(k_iter) 
     do j = 1, S_size(k_iter) 
-        tmp2 = tmp2  -  lamb *  D(i, S(j, k_iter) )   -  C(i, S(j,k_iter)) 
+        tmp2 = tmp2  -  lamb * D(i, S(j, k_iter) )  -  C(i, S(j,k_iter)) 
     enddo   
     tmp2 = 2 * tmp2 / ss 
 
