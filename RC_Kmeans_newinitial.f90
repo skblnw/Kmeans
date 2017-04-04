@@ -1,6 +1,6 @@
 program Kmean
 
-integer,parameter :: K=8, N=115,M=1
+integer,parameter :: K=8, N=115, M=1
 double precision :: lamb = 0 !0
 double precision,parameter :: a = 0.0001 !0.000025
 !double precision :: lamb
@@ -32,13 +32,11 @@ fnameD ="covd.dat";
 call Read_Data(N,C,fname)
 call Read_DataD(N,D,fnameD)
 
-
-write(*,*) "number of atom =N=", N,  "number of cluster=K=", K
-print *, "lamb=" ,lamb
-
+write(*,"(A,I0,A,I0)") "number of atom (N): ", N,  " | number of cluster (K): ", K
 
 FINIED = .FALSE. ; tt=0
 DO WHILE ( .NOT. FINIED )
+    write(*,"(A, F10.6)"), "lamb=" ,lamb
     tt = tt+1
     print *, tt
 
@@ -90,19 +88,19 @@ DO WHILE ( .NOT. FINIED )
     Min_WCSS2=AWCSS(indx)
     Min_wcss3=Bwcss(indx)
     !print *, " minWCSS=" , Min_WCSS
-    call Output_FWCSS(lamb,K,N,FWCSS,Min_WCSS,S, S_size, 'FWCSS-8.txt');
-    call Output_AWCSS(lamb,K,N,FWCSS,Min_WCSS2,AWCSS,S, S_size, 'AWCSS-8.txt');
-    call Output_BWCSS(lamb,K,N,FWCSS,Min_WCSS3,BWCSS,S, S_size, 'BWCSS-8.txt');
-    call Output_F(lamb,K,N,FWCSS,Min_WCSS,S, S_size, 'F-8.txt');
-    call Output_A(lamb,K,N,FWCSS,Min_WCSS2,AWCSS,S, S_size, 'A-8.txt');
-    call Output_B(lamb,K,N,FWCSS,Min_WCSS3,BWCSS,S, S_size, 'B-8.txt');
+    call Output_FWCSS(lamb,K,N,FWCSS,Min_WCSS,S, S_size, 'FWCSS.dat');
+    call Output_AWCSS(lamb,K,N,FWCSS,Min_WCSS2,AWCSS,S, S_size, 'AWCSS.dat');
+    call Output_BWCSS(lamb,K,N,FWCSS,Min_WCSS3,BWCSS,S, S_size, 'BWCSS.dat');
+    call Output_F(lamb,K,N,FWCSS,Min_WCSS,S, S_size, 'F.dat');
+    call Output_A(lamb,K,N,FWCSS,Min_WCSS2,AWCSS,S, S_size, 'A.dat');
+    call Output_B(lamb,K,N,FWCSS,Min_WCSS3,BWCSS,S, S_size, 'B.dat');
 
     atom_i=indx
     call Cal_initial(atom_i,N,K,C,D,T,S,S_size,S_label)
     WCSS2 = Cal_WCSSed( K,N,C,S,S_size,S_label ) 
     WCSS3 = Cal_WCSSsp( K,N,D,S,S_size,S_label )
     WCSS = WCSS2 + lamb * wcss3
-    call Output_Data(lamb,atom_i,K,N,S, S_size,  'init-8.txt'  );
+    call Output_Data( lamb,atom_i,K,N,S, S_size,  'init.dat' );
 
     FINISHED = .FALSE. ; iter = 0; 
 
@@ -128,7 +126,7 @@ DO WHILE ( .NOT. FINIED )
         if ( iter > Max_Iter  )   exit 
     END DO
 
-    call Output_Data(lamb,atom_i, K,N,S, S_size,  'site-8.txt'  );
+    call Output_Data( lamb,atom_i, K,N,S, S_size,  'site.dat' );
     lamb = lamb + a 
 
     if ( tt > M )   then
@@ -188,12 +186,17 @@ subroutine Output_Data(lamb,atom_i,K,N,S, S_size, fname)
     integer, intent(in) :: S(N,K), S_size(K) 
 
     open(11,file=fname,form="formatted",access="append" )
-    write(11,*) "lambda=", lamb
-    write(11,*) "i=", atom_i
-    write(11,*) "WCSS=", WCSS
-    do k_iter =1, K 
-        write(11,*) "S=", S(1: S_size(k_iter) ,   k_iter  )
-    end do 
+    write(11,"(A, F10.6)") "lambda=", lamb
+    write(11,"(A, I0)") "i=", atom_i
+    write(11,"(A, F10.6)") "WCSS=", WCSS
+    do k_iter = 1, K
+        write(11,"(A, I0, A)",advance="no") "S", k_iter, ": "
+        do i_iter = 1, S_size(k_iter)
+            write(11,"(I4)",advance="no") S( i_iter, k_iter )
+        enddo
+        write(11,*) ""
+    enddo
+    write(11,*) ""
     close(11)
 
 end subroutine  Output_Data
