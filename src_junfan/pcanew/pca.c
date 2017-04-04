@@ -45,29 +45,33 @@ int rdpara(int argc, char *argv[], FILE **fp)
     {
       fp[4] = fopen(argv[++i], "w");
     }
-    else if (strcmp(argv[i], "-oav") == 0)
+	else if (strcmp(argv[i], "-odc") == 0)
     {
       fp[5] = fopen(argv[++i], "w");
     }
-    else if (strcmp(argv[i], "-ova") == 0)
+	else if (strcmp(argv[i], "-ofc") == 0)
     {
       fp[6] = fopen(argv[++i], "w");
     }
-    else if (strcmp(argv[i], "-ocf") == 0)
+    else if (strcmp(argv[i], "-oav") == 0)
     {
       fp[7] = fopen(argv[++i], "w");
     }
-    else if (strcmp(argv[i], "-ove") == 0)
+    else if (strcmp(argv[i], "-ova") == 0)
     {
       fp[8] = fopen(argv[++i], "w");
     }
-    else if (strcmp(argv[i], "-cov") == 0)
+    else if (strcmp(argv[i], "-ocf") == 0)
     {
       fp[9] = fopen(argv[++i], "w");
     }
-    else if (strcmp(argv[i], "-rco") == 0)
+    else if (strcmp(argv[i], "-ove") == 0)
     {
       fp[10] = fopen(argv[++i], "w");
+    }
+    else if (strcmp(argv[i], "-oxo") == 0)
+    {
+      fp[11] = fopen(argv[++i], "w");
     }
  }
  return(1);
@@ -75,19 +79,16 @@ int rdpara(int argc, char *argv[], FILE **fp)
 
 int main(int argc, char *argv[])
 {
- FILE *iref, *itrj, *imas, *ipar, *orms, *oave, *oval, *ocfl, *ovec, *ocov, *fp[20];
- FILE *orco; // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2)
- int i, j, k, l, m, n, d, nn, nfram, natm, nvec;
+ FILE *iref, *itrj, *imas, *ipar, *orms, *oave, *oval, *ocfl, *ovec, *ocod, *ocof, *oxor, *fp[20];
+ int i,ii,jj,mm, iii, mmm, j, k, l, m, n, d, nn, nfram, natm, nvec;
  long int ndim, il, iu, lm, lwork, liwork, info, *isuppz, *iwork;
- double rms, trace, vl, vu, abstol, cfl, *mass=NULL, *cov, *val, *vec, *work;
-// double *rcov, *rave; // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2)
- double covdtemp, *covd;
+ double rms, trace, vl, vu, abstol, cfl, *mass=NULL, *cov, *val, *vec, *work , *covd , *covf, covdtemp, covftemp;
  rvec *x, *xref, *xave;
  char str[STRLEN];
 
  if (argc == 1 || strcmp(argv[1], "-h") == 0)
  {
-   fprintf(stderr, "usage: %s -irf REF -itj TRJ -imw mass -ipr control parameters -ors RMSD -oav AVE -ova eigenvalues -ocf cumulative fluctuations -ove eigenvectors -cov covariance_matrix -rco r_cov_matrix\n", argv[0]);
+   fprintf(stderr, "usage: %s -irf ref.dat -itj trj.dat.xyz -imw mass.dat -ipr pca.in -ors rmsd.dat -odc covd.dat -ofc covf.dat -oav ave.dat -ova val.dat -ocf cfl.dat -ove vec.dat -oxo xor.dat\n", argv[0]);
    exit(1);
  }
 
@@ -97,13 +98,13 @@ int main(int argc, char *argv[])
  imas = fp[2];
  ipar = fp[3];
  orms = fp[4];
- oave = fp[5];
- oval = fp[6];
- ocfl = fp[7];
- ovec = fp[8];
- ocov = fp[9];
- orco = fp[10];
-
+ ocod = fp[5];
+ ocof = fp[6];
+ oave = fp[7];
+ oval = fp[8];
+ ocfl = fp[9];
+ ovec = fp[10];
+ oxor = fp[11];
 /* control parameters */
  fgets2(str, STRLEN, ipar); // one-line statement of the file
 
@@ -130,15 +131,15 @@ int main(int argc, char *argv[])
  snew(xref, natm);
  snew(x, natm);
  snew(xave, natm);
- snew(rave, natm); // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2)
  snew(val, ndim);
  snew(cov, ndim*ndim);
- snew(rcov, natm*natm); // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2)
  snew(vec, ndim*nvec);
  snew(mass, natm);
  snew(isuppz, 2*nvec);
  snew(work, lwork);
  snew(iwork, liwork);
+ snew(covd, natm*natm);
+ snew(covf,natm);
 
 /* read the reference structure */
  read_x(iref, natm, xref);
@@ -152,38 +153,36 @@ int main(int argc, char *argv[])
 
  reset_x(natm, xref, mass);
 
- /* start main loop of all the structures in trajectory */
- printf("Reading coordinates\n");
- printf("Calculating RMSD and constructing the green covariance matrix\n");
- printf("Looping all structures in trajectory (nframe = %d)\n", nfram);
+/* start main loop of all the structures in trajectory */
  for (nn=0; nn<nfram; nn++)
  {
 
-    /* read frame. Note: you have to remove PBC by yourself before running this program */
+/* read frame. Note: you have to remove PBC by yourself before running this program */
     read_x(itrj, natm, x);
-
-    /* translate frame */
+    for (i=0; i<natm; i++)
+ {
+fprintf(oxor,"%lf%lf%lf", x[i][0], x[i][1], x[i][2]);
+}
+/* translate frame */
     reset_x(natm, x, mass);
 
-    /* perform least square fit */
+/* perform least square fit */
     do_fit(natm, mass, xref, x);
 
-    /* calculate RMSD */
+/* calculate RMSD */
     rms = cal_rms(natm, mass, x, xref);
     fprintf(orms, "%8d% 10.4lf\n", nn+1, rms);
     fflush(orms);
     for (i=0; i<natm; i++)
     {
-       /* add r to average structure, // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2) */
-       rave[i] += sqrt(x[i][0]*x[i][0] + x[i][1]*x[i][1] + x[i][2]*x[i][2]); 
 
-       /* add positions to average structure */
+/* add positions to average structure */
        for (m=0; m<DIM; m++)
        {
           xave[i][m] += x[i][m];
        }
 
-       /* add componens to covariance matrix */
+/* add componens to covariance matrix */
        for (l=0; l<DIM; l++)
        {
           k = DIM*i+l;
@@ -196,29 +195,73 @@ int main(int argc, char *argv[])
              }
           }
        }
-       
-       /* add components to covariance matrix of distance r, // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2) */
-//        for (j=i; j<natm; j++)
-//       {
-//          rcov[natm*j+i] += sqrt( x[i][0]*x[i][0] + x[i][1]*x[i][1] + x[i][2]*x[i][2] ) * sqrt( x[j][0]*x[j][0] + x[j][1]*x[j][1] + x[j][2]*x[j][2] ); // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2)
-//       }
-       
-       /* add componenets to covariance matrix of atom separation */
-       for (j=i; j<natm; j++)
-       {
-           for (l=0; l<DIM; l++)
-           {
-               covdtemp += x[i][l]*x[j][l];
-           }
-           covd[natm*j+i] += covdtemp / nfram;
-       }
     }
- }
 
-/* divide average by number of frames */
+/* calculate D(i,j)*/
+
+
+  for (ii=0; ii<natm; ii++)
+  {
+    for(jj=ii; jj<natm; jj++)
+    {
+        covdtemp = 0.0;
+        for (mm=0; mm<DIM; mm++)
+        {
+          covdtemp += x[ii][mm]*x[jj][mm];
+        }
+
+        covdtemp = covdtemp / nfram;
+
+        covd[ii*natm+jj] += covdtemp;
+    //  fprintf(ocod, "%15.9lf\n", covd[nn]);
+   //   fflush(ocod);
+    }
+  }
+
+
+/* calculate F(i)*/
+
+  
+  for (iii=0; iii<natm; iii++)
+  {
+    covftemp = 0.0;
+    for (mmm=0; mmm<DIM; mmm++)
+    {
+     
+      covftemp += x[iii][mmm];
+    }
+
+    covftemp = covftemp / nfram ;
+    
+    covf[iii] += covftemp ;
+    // fprintf(ocof, "%15.9lf\n", covf);
+    //   fflush(ocof);
+  }
+
+ }
+int iiii;
+int jjjj;
+for(iiii=0;iiii<natm;iiii++)
+{
+  for(jjjj=iiii; jjjj<natm ;jjjj++)
+  {
+     fprintf(ocod, "%15.9lf\n", covd[iiii*natm+jjjj]);
+     fflush(ocod);
+  }
+}
+
+int i5;
+for(i5=0;i5<natm;i5++)
+{
+  fprintf(ocof, "%15.9lf\n", covf[i5]);
+  fflush(ocof);
+}
+
+
+
+/* divid average by number of frames */
  for (i=0; i<natm; i++)
  {
-    rave[i] /= nfram; // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2)
     for (m=0; m<DIM; m++)
     {
        xave[i][m] /= nfram;
@@ -227,7 +270,6 @@ int main(int argc, char *argv[])
  }
 
 /* obtain the covariance matrix */
- printf("Finalizing the covariance matrix\n");
  for (i=0; i<natm; i++)
  {
     for (l=0; l<DIM; l++)
@@ -244,16 +286,6 @@ int main(int argc, char *argv[])
     }
  }
 
-/* obtain the r covariance matrix, // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2) */
-// printf("Finalizing the r covariance matrix\n");
-// for (i=0; i<natm; i++)
-// {
-//    for (j=i; j<natm; j++)
-//    {
-//       rcov[natm*j+i] = rcov[natm*j+i]/nfram - rave[i]*rave[j];
-//    }
-// }
-
 /* symmetrize the matrix */
  for (i=0; i<ndim; i++)
  {
@@ -263,36 +295,6 @@ int main(int argc, char *argv[])
     }
  }
 
-/* write the covariance matrix */
- for (j=0; j<ndim; j++)
- {
-    for (i=0; i<ndim; i++)
-    {
-       fprintf(ocov, "%15.9lf ", cov[ndim*j+i]);
-    }
-    fprintf(ocov, "\n");
- }
-
-/* write the r covariance matrix, // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2) */
-// for (j=0; j<natm; j++)
-// {
-//    for (i=0; i<natm; i++)
-//    {
-//       fprintf(orco, "%15.9lf ", rcov[natm*j+i]);
-//    }
-//    fprintf(orco, "\n");
-// }
- 
-/* write the atom separation matrix */
- for(i=0;i<natm;i++)
-{
-  for(j=i; j<natm ;j++)
-  {
-     fprintf(ocod, "%15.9lf\n", covd[i*natm+j]);
-     fflush(ocod);
-  }
-}
-
 /* calculate the trace of the matrix */
  trace = 0.0;
  for (j=0; j<ndim; j++)
@@ -301,7 +303,6 @@ int main(int argc, char *argv[])
  }
 
 /* call diagonalization routine */
- printf("Diagonalizing the covariance matrix. Be patient, almost done :)\n");
  vl = 0.0;
  vu = 1000.0;
  il = ndim-nvec+1;
@@ -345,12 +346,14 @@ int main(int argc, char *argv[])
  fclose(imas);
  fclose(ipar);
  fclose(orms);
+ fclose(ocod);
+ fclose(ocof);
  fclose(oave);
  fclose(oval);
  fclose(ocfl);
  fclose(ovec);
- fclose(ocov);
- fclose(orco); // Added for covariance matrix of distance r=sqrt(x^2+y^2+z^2)
+ fclose(oxor);
+ 
 
 /* the end of main */
  return 0;
