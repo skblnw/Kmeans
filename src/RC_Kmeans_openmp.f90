@@ -1,6 +1,8 @@
 program Kmean
 
-integer,parameter :: K=8, N=725, M=1
+use omp_lib
+
+integer,parameter :: K=8, N=230, M=1
 double precision :: lamb = 0 !0
 double precision,parameter :: a = 0.0001 !0.000025
 !double precision :: lamb
@@ -32,6 +34,16 @@ fnameD ="covd.dat";
 call Read_Data(N,C,fname)
 call Read_DataD(N,D,fnameD)
 
+write ( *, '(a)' ) ' '
+write ( *, '(a)' ) 'KMEANS'
+write ( *, '(a)' ) '  FORTRAN90/OpenMP version'
+write ( *, '(a)' ) ' '
+write ( *, '(a)' ) '  Do PCA-EDCG with an additional geometrical factor.'
+
+write ( *, '(a)' ) ' '
+write ( *, '(a,i8)' ) '  The number of processors available = ', omp_get_num_procs ( )
+write ( *, '(a,i8)' ) '  The number of threads available    = ', omp_get_max_threads ( )
+
 write(*,"(A,I0,A,I0)") "number of atom (N): ", N,  " | number of cluster (K): ", K
 
 FINIED = .FALSE. ; tt=0
@@ -53,8 +65,8 @@ DO WHILE ( .NOT. FINIED )
 
         FINISHED = .FALSE. ;  iter = 0;
 
-        DO WHILE ( .NOT. FINISHED ) 
-            iter = iter +1 
+        DO WHILE ( .NOT. FINISHED )
+            iter = iter +1
             call   Update_label(lamb, K,N,C,D,S, S_size, S_label_new)
             call   Update_S(K,N, S_new, S_size_new, S_label_new)
             ! convergence iff  S_label = A_label_new
@@ -63,9 +75,9 @@ DO WHILE ( .NOT. FINIED )
                 FINISHED =.TRUE. 
             endif 
 
-            S_label = S_label_new; 
+            S_label = S_label_new;
             S = S_new ;
-            S_size = S_size_new ; 
+            S_size = S_size_new ;
 
             WCSS2 = Cal_WCSSed( K,N,C,S,S_size,S_label ) 
             WCSS3 = Cal_WCSSsp( K,N,D,S,S_size,S_label )
@@ -198,7 +210,6 @@ subroutine Output_Data(lamb,atom_i,K,N,S, S_size, fname)
     enddo
     write(11,*) ""
     close(11)
-
 end subroutine  Output_Data
 
 subroutine Output_FWCSS(lamb,K,N,FWCSS,Min_WCSS,S, S_size, fname)
@@ -459,6 +470,8 @@ end function Cal_dist2mean
 
 
 subroutine  Update_label( lamb, K,N,C,D,S, S_size,S_label_new )
+    use omp_lib
+
     integer, intent(in) :: K, N
     double precision :: lamb 
     double precision, intent(in) :: C(N,N), D(N,N)
@@ -470,9 +483,21 @@ subroutine  Update_label( lamb, K,N,C,D,S, S_size,S_label_new )
     double precision :: dist(K)
 
     logical :: debug = .true.
+    
+    real    ( kind = 8 ) time_begin
+    real    ( kind = 8 ) time_elapsed
+    real    ( kind = 8 ) time_stop
 
     WCSS = 0.d0; 
 
+    
+    time_begin = omp_get_wtime ( )
+    
+    !$omp parallel &
+    !$omp shared ( N, K, lamb, C, D, S, S_size, min_indx, dist, S_label_new ) &
+    !$omp private ( i, k_iter )
+
+    !$omp do
     do i = 1 , N
         ! calculate dist from atom i to all means using old info
         do k_iter = 1, K ! current cluster
@@ -480,19 +505,21 @@ subroutine  Update_label( lamb, K,N,C,D,S, S_size,S_label_new )
         enddo
         min_indx = minloc( dist(1:K) ) 
         S_label_new(i) = min_indx(1);
-        ! cluster index whose mean is closet to atom i 
-
-        !if ( debug) then
-        !                write(*,*) "atom ", i, " has min dist to site, ", new_site_indx, " with value=", dist(new_site_indx);
-        !   pause
-        !endif 
     enddo
+    !$omp end do
+
+    !$omp end parallel
+    
+    time_stop = omp_get_wtime ( )
+    
+    time_elapsed = time_stop - time_begin
+!    write ( *, '(a,g14.6)' ) '  Elapsed time dT = ', time_elapsed
 end subroutine   Update_label
 
 subroutine  Update_S(K,N, S_new, S_size_new, S_label_new)
     integer, intent(in) :: K, N
     integer :: S_new(N,K), S_size_new(K), S_label_new(N)
-    integer :: i,j, k_iter 
+    integer :: i,j, k_iter, temp
     logical :: debug = .true.
 
     temp=0; j=0;
@@ -509,11 +536,6 @@ subroutine  Update_S(K,N, S_new, S_size_new, S_label_new)
         j=0.d0
         temp=0
     enddo
-
-    !print *, "S_size of cluster 1" ,  S_size(1), S_size_new(1)
-
-    ! print *, "S is " , S(1:40,1)
-    ! print *, "S_new is " , S_new(1:40,1)
 end subroutine   Update_S
 
 end program
