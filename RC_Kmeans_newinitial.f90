@@ -1,11 +1,11 @@
 program Kmean
 
-integer,parameter :: K=8, N=375,M=18
+integer,parameter :: K=8, N=115, M=1
 double precision :: lamb = 0 !0
 double precision,parameter :: a = 0.0001 !0.000025
 !double precision :: lamb
-double precision :: C(N,N),D(N,N), WCSS2,WCSS3,WCSS,FWCSS(N),AWCSS(N),BWCSS(N),Min_WCSS,Min_WCSS2, Min_WCSS3
-character(len=40) :: fname,fnameD
+double precision :: C(N,N), D(N,N), WCSS2, WCSS3, WCSS, FWCSS(N), AWCSS(N), BWCSS(N), Min_WCSS, Min_WCSS2, Min_WCSS3
+character(len=40) :: fname, fnameD
 
 ! S(:,k) : indices of atoms in cluster k until value = 0 
 ! S(:,K) = (/2 5 1  0 0 0 0 0...0 /) means cluster k contains atoms with indices 2 , 5 1,             
@@ -13,7 +13,8 @@ character(len=40) :: fname,fnameD
 ! S_size(k) = # of atoms in cluster k = # of non-zeros in S(:,k)
 ! S_label(i) = index of cluster where atom i is .
 
-! C : covariance matrix 
+! C : essential r-covariance matrix 
+! D : r-covariance matrix
 ! WCSS:  within-cluster sum of squares
 
 
@@ -24,20 +25,18 @@ logical :: FINISHED,FINIED
 
 integer ::  atom_i, k_iter,tt, iter, Max_Iter = 100, min_indx(1),indx;     
 
-
-
+! coved.dat is the essensial subspace covariance matrix (natm*natm). Calculated by adding up essensial eigenvector*eigenvalue*eigenvector and x+y+z
 fname = "coved.dat";
+! covd.dat is the (nearly) full covariance matrix (natm*natm). Elements are C(i,j) = x(i)*x(j) + y(i)*y(j) + z(i)*z(j)
 fnameD ="covd.dat";
 call Read_Data(N,C,fname)
 call Read_DataD(N,D,fnameD)
 
-
-write(*,*) "number of atom =N=", N,  "number of cluster=K=", K
-print *, "lamb=" ,lamb
-
+write(*,"(A,I0,A,I0)") "number of atom (N): ", N,  " | number of cluster (K): ", K
 
 FINIED = .FALSE. ; tt=0
-Do while ( .NOT. FINIED )
+DO WHILE ( .NOT. FINIED )
+    write(*,"(A, F10.6)"), "lamb=" ,lamb
     tt = tt+1
     print *, tt
 
@@ -59,7 +58,7 @@ Do while ( .NOT. FINIED )
             call   Update_label(lamb, K,N,C,D,S, S_size, S_label_new)
             call   Update_S(K,N, S_new, S_size_new, S_label_new)
             ! convergence iff  S_label = A_label_new
-            if (  all (S_label_new .EQ. S_label ) ) then 
+            if (  all (S_label_new .EQ. S_label ) ) then
                 !print *, " Converged";
                 FINISHED =.TRUE. 
             endif 
@@ -78,30 +77,30 @@ Do while ( .NOT. FINIED )
 
         !print *, " final WCSS=" , WCSS
 
-        FWCSS(atom_i)=WCSS !given i and lamb 
+        FWCSS(atom_i)=WCSS !given i and lamb
         AWCSS(atom_i)=WCSS2
         BWCSS(atom_i)=WCSS3
     enddo
 
-    Min_WCSS = MINVAL( FWCSS) 
-    min_indx= minloc (FWCSS(1:N))
+    Min_WCSS = MINVAL(FWCSS)
+    min_indx = minloc(FWCSS(1:N))
     indx=min_indx(1)
     Min_WCSS2=AWCSS(indx)
     Min_wcss3=Bwcss(indx)
     !print *, " minWCSS=" , Min_WCSS
-    call Output_FWCSS(lamb,K,N,FWCSS,Min_WCSS,S, S_size, 'FWCSS-8.txt');
-    call Output_AWCSS(lamb,K,N,FWCSS,Min_WCSS2,AWCSS,S, S_size, 'AWCSS-8.txt');
-    call Output_BWCSS(lamb,K,N,FWCSS,Min_WCSS3,BWCSS,S, S_size, 'BWCSS-8.txt');
-    call Output_F(lamb,K,N,FWCSS,Min_WCSS,S, S_size, 'F-8.txt');
-    call Output_A(lamb,K,N,FWCSS,Min_WCSS2,AWCSS,S, S_size, 'A-8.txt');
-    call Output_B(lamb,K,N,FWCSS,Min_WCSS3,BWCSS,S, S_size, 'B-8.txt');
+    call Output_FWCSS(lamb,K,N,FWCSS,Min_WCSS,S, S_size, 'FWCSS.dat');
+    call Output_AWCSS(lamb,K,N,FWCSS,Min_WCSS2,AWCSS,S, S_size, 'AWCSS.dat');
+    call Output_BWCSS(lamb,K,N,FWCSS,Min_WCSS3,BWCSS,S, S_size, 'BWCSS.dat');
+    call Output_F(lamb,K,N,FWCSS,Min_WCSS,S, S_size, 'F.dat');
+    call Output_A(lamb,K,N,FWCSS,Min_WCSS2,AWCSS,S, S_size, 'A.dat');
+    call Output_B(lamb,K,N,FWCSS,Min_WCSS3,BWCSS,S, S_size, 'B.dat');
 
     atom_i=indx
     call Cal_initial(atom_i,N,K,C,D,T,S,S_size,S_label)
-        WCSS2 = Cal_WCSSed( K,N,C,S,S_size,S_label ) 
-        WCSS3 = Cal_WCSSsp( K,N,D,S,S_size,S_label )
-        WCSS = WCSS2 + lamb * wcss3
-    call Output_Data(lamb,atom_i,K,N,S, S_size,  'init-8.txt'  );
+    WCSS2 = Cal_WCSSed( K,N,C,S,S_size,S_label ) 
+    WCSS3 = Cal_WCSSsp( K,N,D,S,S_size,S_label )
+    WCSS = WCSS2 + lamb * wcss3
+    call Output_Data( lamb,atom_i,K,N,S, S_size,  'init.dat' );
 
     FINISHED = .FALSE. ; iter = 0; 
 
@@ -127,15 +126,15 @@ Do while ( .NOT. FINIED )
         if ( iter > Max_Iter  )   exit 
     END DO
 
-    call Output_Data(lamb,atom_i, K,N,S, S_size,  'site-8.txt'  );
+    call Output_Data( lamb,atom_i, K,N,S, S_size,  'site.dat' );
     lamb = lamb + a 
 
-    if ( tt > M   )   then
+    if ( tt > M )   then
         print *, " DONE";
         FINIED =.TRUE. 
     endif 
 
-enddo
+END DO
 
 
 contains
@@ -158,7 +157,7 @@ subroutine Read_Data(N,C,fname)
       end do
     end do 
     close(11)
-end subroutine  Read_Data   
+end subroutine  Read_Data
 
 subroutine Read_DataD(N,D,fnameD)
     integer , intent(in) :: N            
@@ -187,15 +186,20 @@ subroutine Output_Data(lamb,atom_i,K,N,S, S_size, fname)
     integer, intent(in) :: S(N,K), S_size(K) 
 
     open(11,file=fname,form="formatted",access="append" )
-    write(11,*) "lambda=", lamb
-    write(11,*) "i=", i
-    write(11,*) "WCSS=", WCSS
-    do k_iter =1, K 
-        write(11,*) "S=", S(1: S_size(k_iter) ,   k_iter  )
-    end do 
+    write(11,"(A, F10.6)") "lambda=", lamb
+    write(11,"(A, I0)") "i=", atom_i
+    write(11,"(A, F10.6)") "WCSS=", WCSS
+    do k_iter = 1, K
+        write(11,"(A, I0, A)",advance="no") "S", k_iter, ": "
+        do i_iter = 1, S_size(k_iter)
+            write(11,"(I4)",advance="no") S( i_iter, k_iter )
+        enddo
+        write(11,*) ""
+    enddo
+    write(11,*) ""
     close(11)
 
-end subroutine  Output_Data  
+end subroutine  Output_Data
 
 subroutine Output_FWCSS(lamb,K,N,FWCSS,Min_WCSS,S, S_size, fname)
     integer , intent(in) :: N,K
@@ -206,7 +210,7 @@ subroutine Output_FWCSS(lamb,K,N,FWCSS,Min_WCSS,S, S_size, fname)
     open(11,file=fname,form="formatted",access="append" )
     write(11,*)  Min_WCSS
     close(11)
-end subroutine  Output_FWCSS    
+end subroutine  Output_FWCSS
 
 subroutine Output_AWCSS(lamb,K,N,FWCSS,Min_WCSS2,AWCSS,S, S_size, fname)
     integer , intent(in) :: N,K
@@ -218,7 +222,7 @@ subroutine Output_AWCSS(lamb,K,N,FWCSS,Min_WCSS2,AWCSS,S, S_size, fname)
     open(11,file=fname,form="formatted",access="append" )
     write(11,*)  Min_WCSS2
     close(11)
-end subroutine  Output_AWCSS 
+end subroutine  Output_AWCSS
         
 subroutine Output_BWCSS(lamb,K,N,FWCSS,Min_WCSS3,BWCSS,S, S_size, fname)
     integer , intent(in) :: N,K
@@ -230,7 +234,7 @@ subroutine Output_BWCSS(lamb,K,N,FWCSS,Min_WCSS3,BWCSS,S, S_size, fname)
     open(11,file=fname,form="formatted",access="append" )
     write(11,*)  Min_WCSS3
     close(11)
-end subroutine  Output_BWCSS 
+end subroutine  Output_BWCSS
 
 subroutine Output_F(lamb,K,N,FWCSS,Min_WCSS,S, S_size, fname)
     integer , intent(in) :: N,K
@@ -245,7 +249,7 @@ subroutine Output_F(lamb,K,N,FWCSS,Min_WCSS,S, S_size, fname)
         write(11,*)  FWCSS(j)
     enddo
     close(11)
-end subroutine  Output_F    
+end subroutine  Output_F
 
 subroutine Output_A(lamb,K,N,FWCSS,Min_WCSS2,AWCSS,S, S_size, fname)
     integer , intent(in) :: N,K
@@ -260,7 +264,7 @@ subroutine Output_A(lamb,K,N,FWCSS,Min_WCSS2,AWCSS,S, S_size, fname)
         write(11,*)  AWCSS(j)
     enddo
     close(11)
-end subroutine  Output_A 
+end subroutine  Output_A
         
 subroutine Output_B(lamb,K,N,FWCSS,Min_WCSS3,BWCSS,S, S_size, fname)
     integer , intent(in) :: N,K
@@ -275,7 +279,7 @@ subroutine Output_B(lamb,K,N,FWCSS,Min_WCSS3,BWCSS,S, S_size, fname)
         write(11,*)  BWCSS(j)
     enddo
     close(11)
-end subroutine  Output_B 
+end subroutine  Output_B
 
 
 function Cal_dist(lamb,i,N,K,C,D) result(dist)
@@ -289,84 +293,32 @@ end function
 subroutine Cal_initial(atom_i,N,K,C,D,T,S,S_size,S_label)
     integer :: S(N,K),S_label(N),S_size(K),T(K)
     double precision :: C(N,N), D(N,N)
-    integer :: N,K,atom_i,j,temp
+    integer :: N,K,atom_i,j,kk,temp
     !integer:: min_indx(N),max_indx(N)
     integer :: max_indx(1),min_indx(1)
-    double precision :: dist(N),dist1(N),dist2(N),dist3(N),dist4(N),dist5(N),dist6(N),L(K)
+    double precision :: dist_min(N), dist_tmp(N), L(K)
+    double precision, dimension(K, N) :: dist
 
-    T(1)=atom_i
-    ! calculate dist from atom i to all atoms
-    dist=Cal_dist(lamb,T(1),N,K,C,D)
-    max_indx = maxloc(dist(1:N) ) 
-
-    T(2)=max_indx(1)
-    dist1=Cal_dist(lamb,T(1),N,K,C,D)
-    dist2=Cal_dist(lamb,T(2),N,K,C,D)
-    do j=1,N
-        dist(j)=minval((/dist1(j), dist2(j)/))
-    enddo
-    max_indx=maxloc(dist(1:N))
-
-    T(3)=max_indx(1)
-    dist1=Cal_dist(lamb,T(1),N,K,C,D)
-    dist2=Cal_dist(lamb,T(2),N,K,C,D)
-    dist3=Cal_dist(lamb,T(3),N,K,C,D)
-    do j=1,N
-        dist(j)=minval((/dist1(j), dist2(j), dist3(j)/))
+    ! do kk=1,K
+    !     do j=1,N
+    !         dist(kk,j) = 0.0d0
+    !     enddo
+    ! enddo
+    T(1) = atom_i
+    do kk=1,K-1
+        dist_tmp = Cal_dist(lamb,T(kk),N,K,C,D)
+        do j=1,N
+            dist(kk,j) = dist_tmp(j)
+            dist_min(j) = minval(dist(1:kk,j))
+        enddo
+        max_indx = maxloc(dist_min(1:N))
+        T(kk+1) = max_indx(1)
     enddo
 
-    max_indx=maxloc(dist(1:N))
-
-
-
-
-    T(4)=max_indx(1)
-    dist1=Cal_dist(lamb,T(1),N,K,C,D)
-    dist2=Cal_dist(lamb,T(2),N,K,C,D)
-    dist3=Cal_dist(lamb,T(3),N,K,C,D)
-    dist4=Cal_dist(lamb,T(4),N,K,C,D)
     do j=1,N
-        dist(j)=minval((/dist1(j),dist2(j),dist3(j),dist4(j)/))
-    enddo
-
-    max_indx=maxloc(dist(1:N))
-
-    T(5)=max_indx(1)
-    dist1=Cal_dist(lamb,T(1),N,K,C,D)
-    dist2=Cal_dist(lamb,T(2),N,K,C,D)
-    dist3=Cal_dist(lamb,T(3),N,K,C,D)
-    dist4=Cal_dist(lamb,T(4),N,K,C,D)
-    dist5=Cal_dist(lamb,T(5),N,K,C,D)
-    do j=1,N
-        dist(j)=minval((/dist1(j),dist2(j),dist3(j),dist4(j),dist5(j)/))
-    enddo
-
-    max_indx=maxloc(dist(1:N))
-
-
-    T(6)=max_indx(1)
-    dist1=Cal_dist(lamb,T(1),N,K,C,D)
-    dist2=Cal_dist(lamb,T(2),N,K,C,D)
-    dist3=Cal_dist(lamb,T(3),N,K,C,D)
-    dist4=Cal_dist(lamb,T(4),N,K,C,D)
-    dist5=Cal_dist(lamb,T(5),N,K,C,D)
-    dist6=Cal_dist(lamb,T(6),N,K,C,D)
-    do j=1,N
-        dist(j)=minval((/dist1(j),dist2(j),dist3(j),dist4(j),dist5(j),dist6(j)/))
-    enddo
-
-    max_indx=maxloc(dist(1:N))
-
-    T(7)=max_indx(1)
-
-    do j=1,N
-        L(1)=C(T(1),T(1)) - 2 * C(T(1),j) + C(j,j) + lamb * ( D(T(1),T(1)) - 2 * D(T(1),j) + D(j,j) )
-        L(2)=C(T(2),T(2)) - 2 * C(T(2),j) + C(j,j) + lamb * ( D(T(2),T(2)) - 2 * D(T(2),j) + D(j,j) )
-        L(3)=C(T(3),T(3)) - 2 * C(T(3),j) + C(j,j) + lamb * ( D(T(3),T(3)) - 2 * D(T(3),j) + D(j,j) )
-        L(4)=C(T(4),T(4)) - 2 * C(T(4),j) + C(j,j) + lamb * ( D(T(4),T(4)) - 2 * D(T(4),j) + D(j,j) )
-        L(5)=C(T(5),T(5)) - 2 * C(T(5),j) + C(j,j) + lamb * ( D(T(5),T(5)) - 2 * D(T(5),j) + D(j,j) )
-        L(6)=C(T(6),T(6)) - 2 * C(T(6),j) + C(j,j) + lamb * ( D(T(6),T(6)) - 2 * D(T(6),j) + D(j,j) )
-        L(7)=C(T(7),T(7)) - 2 * C(T(7),j) + C(j,j) + lamb * ( D(T(7),T(7)) - 2 * D(T(7),j) + D(j,j) )
+        do kk=1,K
+            L(kk) = C(T(kk),T(kk)) - 2 * C(T(kk),j) + C(j,j) + lamb * ( D(T(kk),T(kk)) - 2 * D(T(kk),j) + D(j,j) )
+        enddo
         min_indx=minloc(L(1:K))
         S_label(j)=min_indx(1)
     enddo
@@ -375,37 +327,37 @@ subroutine Cal_initial(atom_i,N,K,C,D,T,S,S_size,S_label)
         temp=0
         do j = 1, N
             if (S_label(j) == K_iter) then
-            temp = temp + 1;
-            S(temp, K_iter) = j;
+                temp = temp + 1;
+                S(temp, K_iter) = j;
             endif
         enddo
         S_size(K_iter) = temp;
     enddo
-end subroutine 
+end subroutine
 
-function Cal_distsp(i,k_iter, K,N,D, S, S_Size) result(dist3)
+function Cal_distsp( i,k_iter,K,N,D,S,S_Size ) result(dist3)
 ! calculate SPACIAL distance of atom i to mean of cluster k_iter 
     integer, intent(in) :: i, k_iter, K, N
     double precision, intent(in) :: D(N,N)
     integer, intent(in) :: S(N,K), S_size(K)
 
-    integer :: j,j2 
-    double precision :: dist3, ss,sss,tmp1,tmp2
+    integer :: j, j2
+    double precision :: dist3, ss, sss, tmp1, tmp2
 
     tmp1=0.d0; tmp2=0.d0;
     sss= S_size(k_iter) * S_size(k_iter)
-    do j = 1, S_size(k_iter) 
+    do j = 1, S_size(k_iter)
         do j2 = 1, S_size(k_iter)
-            tmp1= tmp1 + D(S(j, k_iter), S(j2, k_iter) ) 
-        enddo  
-    enddo 
+            tmp1= tmp1 + D(S(j, k_iter), S(j2, k_iter) )
+        enddo
+    enddo
     tmp1 = tmp1 / sss
 
-    ss= S_size(k_iter) 
-    do j = 1, S_size(k_iter) 
-        tmp2 = tmp2 -  D(i, S(j,k_iter)) 
-    enddo   
-    tmp2 = 2 * tmp2 / ss 
+    ss= S_size(k_iter)
+    do j = 1, S_size(k_iter)
+        tmp2 = tmp2 -  D(i, S(j,k_iter))
+    enddo
+    tmp2 = 2 * tmp2 / ss
 
     dist3 = D(i,i) + tmp2 + tmp1
 end function Cal_distsp
@@ -424,40 +376,38 @@ function Cal_WCSSsp( K,N,D,S,S_size,S_label ) result (WCSSsp)
         tmp = 0.d0; 
         do j = 1, S_size(k_iter)  ! visit atom in cluster 
             i = S(j, k_iter) ! atom label 
-            tmp = tmp + Cal_distsp(i,k_iter, K,N,D, S, S_Size)           
+            tmp = tmp + Cal_distsp(i,k_iter, K, N, D, S, S_Size)           
         enddo 
         WCSSsp = WCSSsp + tmp;
     enddo 
-end function  Cal_WCSSsp  
+end function Cal_WCSSsp
 
-function Cal_disted(i,k_iter, K,N,C, S, S_Size) result(dist2)
-    ! calculate distance of atom i to mean of cluster k_iter 
-        integer, intent(in) :: i, k_iter, K, N
-        double precision, intent(in) :: C(N,N)
-        integer, intent(in) :: S(N,K), S_size(K)
+function Cal_disted( i, k_iter, K, N, C, S, S_Size ) result(dist2)
+! calculate distance of atom i to mean of cluster k_iter
+    integer, intent(in) :: i, k_iter, K, N
+    double precision, intent(in) :: C(N,N)
+    integer, intent(in) :: S(N,K), S_size(K)
 
-        integer :: j,j2 
-        double precision :: dist2, ss,sss,tmp1,tmp2
+    integer :: j,j2
+    double precision :: dist2,ss,sss,tmp1,tmp2
 
-        
-          tmp1=0.d0; tmp2=0.d0;
-         sss= S_size(k_iter) * S_size(k_iter)
-        do j = 1, S_size(k_iter) 
-            do j2 = 1, S_size(k_iter)
-                 tmp1= tmp1 + C(S(j, k_iter), S(j2, k_iter) ) 
-            enddo  
-        enddo 
-        tmp1 = tmp1 / sss
+    tmp1=0.d0; tmp2=0.d0;
+    sss= S_size(k_iter) * S_size(k_iter)
+    do j = 1, S_size(k_iter)
+        do j2 = 1, S_size(k_iter)
+            tmp1= tmp1 + C(S(j, k_iter), S(j2, k_iter))
+        enddo
+    enddo
+    tmp1 = tmp1 / sss
 
-         ss= S_size(k_iter) 
-         do j = 1, S_size(k_iter) 
-            tmp2 = tmp2 -  C(i, S(j,k_iter)) 
-         enddo   
-         tmp2 = 2 * tmp2 / ss 
+    ss = S_size(k_iter)
+    do j = 1, S_size(k_iter)
+        tmp2 = tmp2 - C(i, S(j,k_iter))
+    enddo
+    tmp2 = 2 * tmp2 / ss
 
-         dist2 = C(i,i) + tmp2 + tmp1  
-
-    end function Cal_disted
+    dist2 = C(i,i) + tmp2 + tmp1
+end function Cal_disted
 
 function Cal_WCSSed( K,N,C,S,S_size,S_label ) result (WCSS2)
     integer, intent(in) :: K, N
@@ -473,11 +423,11 @@ function Cal_WCSSed( K,N,C,S,S_size,S_label ) result (WCSS2)
         tmp = 0.d0; 
         do j = 1, S_size(k_iter)  ! visit atom in cluster 
             i = S(j, k_iter) ! atom label                
-            tmp = tmp + Cal_disted(i,k_iter, K,N,C, S, S_size )                           
+            tmp = tmp + Cal_disted(i, k_iter, K, N, C, S, S_size )
         enddo
         WCSS2 = WCSS2 + tmp;
     enddo
-end function  Cal_WCSSed
+end function Cal_WCSSed
 
 function Cal_dist2mean(i,k_iter, lamb, K,N,C,D, S, S_Size) result(dist)
 ! calculate distance of atom i to mean of cluster k_iter 
@@ -508,7 +458,7 @@ function Cal_dist2mean(i,k_iter, lamb, K,N,C,D, S, S_Size) result(dist)
 end function Cal_dist2mean
 
 
-subroutine  Update_label(lamb, K,N,C,D,S, S_size, S_label_new)
+subroutine  Update_label( lamb, K,N,C,D,S, S_size,S_label_new )
     integer, intent(in) :: K, N
     double precision :: lamb 
     double precision, intent(in) :: C(N,N), D(N,N)
