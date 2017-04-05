@@ -219,6 +219,7 @@ int main(int argc, char *argv[])
        /* add componenets to covariance matrix of atom separation */
        for (j=i; j<natm; j++)
        {
+           covdtemp = 0.0;
            for (l=0; l<DIM; l++)
            {
                covdtemp += x[i][l]*x[j][l];
