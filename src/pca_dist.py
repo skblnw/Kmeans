@@ -9,6 +9,8 @@ import mkpy
 parser = argparse.ArgumentParser()
 parser.add_argument("ced", help="Input coved.dat")
 parser.add_argument("cod", help="Input covd.dat")
+parser.add_argument("--output_A", default='A.dat', help="Output matrix A (Default: A.dat)")
+parser.add_argument("--output_B", default='B.dat', help="Output matrix B (Default: B.dat)")
 
 args = parser.parse_args()
 
@@ -56,5 +58,5 @@ for ii in np.arange(D.shape[0]):
         B[ii,jj] = D[ii,ii] - D[ii,jj]*2 + D[jj,jj]
 print(B.shape)
 
-print(C[0:3,0:3], "\n", A[0:3,0:3])
-print(D[0:3,0:3], "\n", B[0:3,0:3])
+np.savetxt(args.output_A, A, fmt='%15.9f')
+np.savetxt(args.output_B, B, fmt='%15.9f')
