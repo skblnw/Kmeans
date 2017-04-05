@@ -2,6 +2,17 @@
  * Principal Component Analysis (PCA) of proteins.
  * By Zhiyong "John" Zhang, 12/13/2008.
  */
+ 
+/*
+ * PCA Anlysis and print covd.dat representing the geometrical covariance of atoms
+ * Modified by Kevin Chun Chan, Apr 2017
+ */
+ 
+/*
+ * IMPORTANT LOGS
+ * 5/4/2017 output of covd added
+ * 5/4/2017 output of norm of deviation vector commented out
+ */
 
 #include <stdlib.h>
 #include <string.h>
@@ -212,7 +223,7 @@ int main(int argc, char *argv[])
            {
                covdtemp += x[i][l]*x[j][l];
            }
-           covd[natm*j+i] += covdtemp / nfram;
+           covd[natm*i+j] += covdtemp / nfram;
        }
     }
  }
@@ -266,11 +277,11 @@ int main(int argc, char *argv[])
  }
 
 /* write the covariance matrix */
- for (j=0; j<ndim; j++)
+ for (i=0; i<ndim; i++)
  {
-    for (i=0; i<ndim; i++)
+    for (j=0; j<ndim; j++)
     {
-       fprintf(ocov, "%15.9lf ", cov[ndim*j+i]);
+       fprintf(ocov, "%15.9lf ", cov[ndim*i+j]);
     }
     fprintf(ocov, "\n");
     fflush(ocov);
@@ -287,14 +298,14 @@ int main(int argc, char *argv[])
 // }
  
 /* write the atom separation matrix */
-/* Size of covd.dat will be (natm+1)*natm/2
- for(i=0;i<natm;i++)
+/* Size of covd.dat will be (natm+1)*natm/2 */
+for(i=0; i<natm; i++)
 {
-  for(j=i; j<natm ;j++)
-  {
-     fprintf(ocod, "%15.9lf\n", covd[i*natm+j]);
-     fflush(ocod);
-  }
+    for(j=i; j<natm; j++)
+    {
+        fprintf(ocod, "%15.9lf\n", covd[natm*i+j]);
+    }
+    fflush(ocod);
 }
 
 /* calculate the trace of the matrix */
