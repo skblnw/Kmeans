@@ -4,6 +4,7 @@ import argparse
 import numpy as np
 import sys
 sys.path.append("/home/kevin/scripts/mkpy")
+sys.path.append(".")
 import mkpy
 
 # FUNCTION DECLARATIONS
@@ -98,6 +99,23 @@ def initialization(F, natm, ncg):
     
     return unique_initial_list
     
+def convert_cglabel_to_atmlabel(ncg, atm_cglabel):
+    cg_atmlabel = []
+    for cg in range(ncg):
+        atmlabel = np.where( atm_cglabel == cg)[0]
+        atmlabel = np.add(atmlabel, 1)
+        cg_atmlabel.append(atmlabel)
+    
+    return cg_atmlabel
+    
+def write_wcss_per_initial(unique_initial_list, initial_wcss, ncg, lamb):
+    unique_initial_list = np.add(unique_initial_list, 1)
+    output_data = np.column_stack((unique_initial_list, np.array(initial_wcss)))
+    filename = "FWCSS_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat" 
+    fmt = ["%4d" for ii in range(ncg)]
+    fmt.extend(["%10.6f"])
+    np.savetxt(filename, output_data, fmt)
+    
 # MAIN
 
 if __name__ == '__main__':
@@ -185,6 +203,7 @@ if __name__ == '__main__':
             atm_cglabel_new = np.argmin(atm_wcss, axis=1)
             if np.array_equal(atm_cglabel_new, atm_cglabel):
                 #print("Converged in ", str(ii), " iterations!")
+                # Save times of convergence
                 initial_converge_count.append(ii)
                 break
             else:
@@ -198,13 +217,23 @@ if __name__ == '__main__':
         cg_wcss = calc_residual_wcss(C, D, args.ncg, atm_cglabel)
         initial_wcss.append(sum(cg_wcss))
 
-    print(min(initial_wcss))
+    print("kmeans> Maximum number of iteration is ", str(max(initial_converge_count)))
+    print("kmeans> The smallest sum of residual WCSS is MINWCSS=", str(min(initial_wcss)))
+    
+    # Write WCSS per initial sets
+    write_wcss_per_initial(unique_initial_list, initial_wcss, args.ncg, lamb)
+    
+    # Find the best CG set (index) according to the smallest WCSS
     index = initial_wcss.index(min(initial_wcss))
     atm_cglabel = initial_cglabel[index]
-    print(atm_cglabel)
+    #print(atm_cglabel)
+
     # Convert cglabel to atmlabel
-    cg_atmlabel = []
-    for cg in range(args.ncg):
-        atmlabel = np.where( atm_cglabel == cg)[0]
-        cg_atmlabel.append(atmlabel)
-    print(cg_atmlabel)
+    cg_atmlabel = convert_cglabel_to_atmlabel(args.ncg, atm_cglabel)
+    filename = "SITE_cg" + str(args.ncg) + "_lamb" + str(lamb) + ".dat" 
+    with open(filename, "wb") as f:
+        for nn, row in enumerate(cg_atmlabel):
+            print(row)
+            string = "Site "+str(nn)+"="
+            f.write(string.encode('ascii'))
+            np.savetxt(f, [row], fmt='%4d',delimiter=',')
