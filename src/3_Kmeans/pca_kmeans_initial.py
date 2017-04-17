@@ -9,24 +9,24 @@ import mkpy
 
 # FUNCTION DECLARATIONS
 
-def calc_residual_wcss(C, factor, ncg, atm_cglabel):
+def calc_residual_wcss(C, ncg, atm_cglabel):
     # Calculate WCSS per CG sets
     # w(xx)_in_cluster: { (cluster_size) X 1 }
     # css_in_cluster:   { (cluster_size) X 1 }
     cg_wcss = []
-    atm_wii = factor * C.diagonal()
+    atm_wii = C.diagonal()
     for cg in range(ncg):
         atmlabel = np.where( atm_cglabel == cg)[0]
         wjj_in_cluster = 0.0
         for j1 in atmlabel:
             for j2 in atmlabel:
-                wjj_in_cluster += factor * C[j1, j2]
+                wjj_in_cluster += C[j1, j2]
         wjj_in_cluster /= atmlabel.size * atmlabel.size
         css_in_cluster = np.tile(wjj_in_cluster, (atmlabel.size,1))
         
         wij_in_cluster = 0.0
         for jj in atmlabel:
-            wij_in_cluster += factor * C[atmlabel, jj]
+            wij_in_cluster += C[atmlabel, jj]
         wij_in_cluster = wij_in_cluster * 2 / atmlabel.size
         wij_in_cluster = wij_in_cluster.reshape((atmlabel.size,1))
         css_in_cluster -= wij_in_cluster
@@ -229,12 +229,13 @@ if __name__ == '__main__':
         # After convergence, calculate residual WCSS (WCSS per CG set)
         initial_cglabel.append(atm_cglabel)
         #print(atm_cglabel)
-        cg_wcss_a = calc_residual_wcss(C, 1.0, ncg, atm_cglabel)
-        cg_wcss_b = calc_residual_wcss(D, lamb, ncg, atm_cglabel)
-        cg_wcss = np.add(cg_wcss_a, cg_wcss_b)
-        initial_wcss.append(cg_wcss.sum())
+        cg_wcss_a = calc_residual_wcss(C, ncg, atm_cglabel)
+        cg_wcss_b = calc_residual_wcss(D, ncg, atm_cglabel)
         initial_wcss_a.append(cg_wcss_a)
         initial_wcss_b.append(cg_wcss_b)
+        cg_wcss_b = np.multiply(cg_wcss_b, lamb)
+        cg_wcss = np.add(cg_wcss_a, cg_wcss_b)
+        initial_wcss.append(cg_wcss.sum())
 
     print("kmeans> Maximum number of iteration is ", str(max(initial_converge_count)))
     print("kmeans> Write iteration counts")
@@ -246,11 +247,11 @@ if __name__ == '__main__':
     # Write WCSS_A per CG_site per initial_set
     filename = "AWCSS_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
     print("kmeans> Write WCSS_A profile")
-    np.savetxt(filename, initial_wcss_a, fmt="%10.6f")
+    np.savetxt(filename, initial_wcss_a, fmt="%1.6e")
     # Write WCSS_B per CG_site per initial_set
     filename = "BWCSS_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
     print("kmeans> Write WCSS_B profile")
-    np.savetxt(filename, initial_wcss_b, fmt="%10.6f")
+    np.savetxt(filename, initial_wcss_b, fmt="%1.6e")
 
     # Write WCSS per initial set
     filename = "FWCSS_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
