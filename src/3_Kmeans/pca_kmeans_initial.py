@@ -9,24 +9,24 @@ import mkpy
 
 # FUNCTION DECLARATIONS
 
-def calc_residual_wcss(C, D, ncg, atm_cglabel):
+def calc_residual_wcss(C, factor, ncg, atm_cglabel):
     # Calculate WCSS per CG sets
     # w(xx)_in_cluster: { (cluster_size) X 1 }
     # css_in_cluster:   { (cluster_size) X 1 }
     cg_wcss = []
-    atm_wii = C.diagonal() + lamb * D.diagonal()
+    atm_wii = factor * C.diagonal()
     for cg in range(ncg):
         atmlabel = np.where( atm_cglabel == cg)[0]
         wjj_in_cluster = 0.0
         for j1 in atmlabel:
             for j2 in atmlabel:
-                wjj_in_cluster += C[j1, j2] + lamb * D[j1, j2]
+                wjj_in_cluster += factor * C[j1, j2]
         wjj_in_cluster /= atmlabel.size * atmlabel.size
         css_in_cluster = np.tile(wjj_in_cluster, (atmlabel.size,1))
         
         wij_in_cluster = 0.0
         for jj in atmlabel:
-            wij_in_cluster += C[atmlabel, jj] + lamb * D[atmlabel, jj]
+            wij_in_cluster += factor * C[atmlabel, jj]
         wij_in_cluster = wij_in_cluster * 2 / atmlabel.size
         wij_in_cluster = wij_in_cluster.reshape((atmlabel.size,1))
         css_in_cluster -= wij_in_cluster
@@ -37,7 +37,7 @@ def calc_residual_wcss(C, D, ncg, atm_cglabel):
         
         cg_wcss.append(css_in_cluster.sum())
         
-    return cg_wcss
+    return np.array(cg_wcss)
 
 def calc_wcss_per_atom(C, D, ncg, atm_cglabel):
     #print("Iteration ", str(ii))
@@ -57,11 +57,11 @@ def calc_wcss_per_atom(C, D, ncg, atm_cglabel):
                 atm_wjj += C[j1, j2] + lamb * D[j1, j2]
         atm_wjj /= atmlabel.size * atmlabel.size
         atm_wcss.append(atm_wjj)
-    atm_wcss = np.tile(np.array(atm_wcss), (args.natm,1))
+    atm_wcss = np.tile(np.array(atm_wcss), (natm,1))
     #print(atm_wcss[0,:])
     
     # Calculate Cij and add to the atm_wcss matrix
-    for cg in range(args.ncg):
+    for cg in range(ncg):
         atmlabel = np.where( atm_cglabel == cg)[0]
         atm_wij = 0.0
         for jj in atmlabel:
@@ -72,7 +72,7 @@ def calc_wcss_per_atom(C, D, ncg, atm_cglabel):
     
     # Calculate Cii and add to the atm_wcss matrix
     atm_wii = C.diagonal() + lamb * D.diagonal()
-    atm_wii = np.tile(atm_wii.T, (args.ncg,1)).T
+    atm_wii = np.tile(atm_wii.T, (ncg,1)).T
     atm_wcss += atm_wii
     #print(atm_wcss[0,:])
     
@@ -108,14 +108,22 @@ def convert_cglabel_to_atmlabel(ncg, atm_cglabel):
     
     return cg_atmlabel
     
-def write_wcss_per_initial(unique_initial_list, initial_wcss, ncg, lamb):
+def write_wcss_per_initial(filename, unique_initial_list, initial_wcss, ncg, lamb):
     unique_initial_list = np.add(unique_initial_list, 1)
     output_data = np.column_stack((unique_initial_list, np.array(initial_wcss)))
-    filename = "FWCSS_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat" 
     fmt = ["%4d" for ii in range(ncg)]
     fmt.extend(["%10.6f"])
     np.savetxt(filename, output_data, fmt)
     
+def write_site(filename, cg_atmlabel, ncg, lamb):
+    print("kmeans> Here is the final CG sites:")
+    with open(filename, "wb") as f:
+        for nn, row in enumerate(cg_atmlabel):
+            print(row)
+            string = "Site_"+str(nn)+"="
+            f.write(string.encode('ascii'))
+            np.savetxt(f, [row], fmt='%4d')
+
 # MAIN
 
 if __name__ == '__main__':
@@ -128,7 +136,11 @@ if __name__ == '__main__':
     parser.add_argument("lamb", type=float, help="Value of Lamda")
 
     args = parser.parse_args()
+    # Decalre some frequently used variables
+    natm = args.natm
+    ncg = args.ncg
     lamb = args.lamb
+    print("kmeans> Number of atom (N): ", str(natm), " | Number of CG sites (K): ", str(ncg))
 
     # Read coved.dat
     print("kmeans> Reading " + str(args.ced))
@@ -169,9 +181,10 @@ if __name__ == '__main__':
     # Compute F from A+B
     F = A + lamb * B
 
+
     # Iniitialization
     print("kmeans> Initialization starts")
-    unique_initial_list = initialization(F, args.natm, args.ncg)
+    unique_initial_list = initialization(F, natm, ncg)
     print("kmeans> Initialization finished")
     print("kmeans> ", str(unique_initial_list.shape[0]), " initial sets found!")
 
@@ -179,6 +192,8 @@ if __name__ == '__main__':
     # WCSS(C) = Cii - 2/S * Cij + 1/S^2 * Cjj
     # initial_wcss: { N_initial X 1 }
     initial_wcss = []
+    initial_wcss_a = []
+    initial_wcss_b = []
     initial_cglabel = []
     initial_converge_count = []
     for index_list in unique_initial_list:
@@ -187,7 +202,7 @@ if __name__ == '__main__':
         
         # Declaring first atm_cglabel using initial guess
         atm_cglabel_new = np.argmin(atm_wcss, axis=1)
-        atm_cglabel = np.zeros((args.natm,))
+        atm_cglabel = np.zeros((natm,))
         if np.array_equal(atm_cglabel_new, atm_cglabel):
             print("kmeans> ERROR: Initial guess went wrong!")
             exit()
@@ -195,8 +210,8 @@ if __name__ == '__main__':
             atm_cglabel = atm_cglabel_new
         
         # Main iteration: clustering according to WCSS per atom
-        for ii in range(100):
-            atm_wcss = calc_wcss_per_atom(C, D, args.ncg, atm_cglabel)
+        for ii in range(999):
+            atm_wcss = calc_wcss_per_atom(C, D, ncg, atm_cglabel)
             
             # Update atom's CG index
             # Break if converged
@@ -214,14 +229,33 @@ if __name__ == '__main__':
         # After convergence, calculate residual WCSS (WCSS per CG set)
         initial_cglabel.append(atm_cglabel)
         #print(atm_cglabel)
-        cg_wcss = calc_residual_wcss(C, D, args.ncg, atm_cglabel)
-        initial_wcss.append(sum(cg_wcss))
+        cg_wcss_a = calc_residual_wcss(C, 1.0, ncg, atm_cglabel)
+        cg_wcss_b = calc_residual_wcss(D, lamb, ncg, atm_cglabel)
+        cg_wcss = np.add(cg_wcss_a, cg_wcss_b)
+        initial_wcss.append(cg_wcss.sum())
+        initial_wcss_a.append(cg_wcss_a)
+        initial_wcss_b.append(cg_wcss_b)
 
     print("kmeans> Maximum number of iteration is ", str(max(initial_converge_count)))
+    print("kmeans> Write iteration counts")
+    # Write iteration counts
+    filename = "IterCount_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
+    np.savetxt(filename, initial_converge_count, fmt='%3d')
     print("kmeans> The smallest sum of residual WCSS is MINWCSS=", str(min(initial_wcss)))
     
-    # Write WCSS per initial sets
-    write_wcss_per_initial(unique_initial_list, initial_wcss, args.ncg, lamb)
+    # Write WCSS_A per CG_site per initial_set
+    filename = "AWCSS_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
+    print("kmeans> Write WCSS_A profile")
+    np.savetxt(filename, initial_wcss_a, fmt="%10.6f")
+    # Write WCSS_B per CG_site per initial_set
+    filename = "BWCSS_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
+    print("kmeans> Write WCSS_B profile")
+    np.savetxt(filename, initial_wcss_b, fmt="%10.6f")
+
+    # Write WCSS per initial set
+    filename = "FWCSS_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
+    print("kmeans> Write a full list of initial guess and final WCSS values to ", filename)
+    write_wcss_per_initial(filename, unique_initial_list, initial_wcss, ncg, lamb)
     
     # Find the best CG set (index) according to the smallest WCSS
     index = initial_wcss.index(min(initial_wcss))
@@ -229,11 +263,9 @@ if __name__ == '__main__':
     #print(atm_cglabel)
 
     # Convert cglabel to atmlabel
-    cg_atmlabel = convert_cglabel_to_atmlabel(args.ncg, atm_cglabel)
-    filename = "SITE_cg" + str(args.ncg) + "_lamb" + str(lamb) + ".dat" 
-    with open(filename, "wb") as f:
-        for nn, row in enumerate(cg_atmlabel):
-            print(row)
-            string = "Site "+str(nn)+"="
-            f.write(string.encode('ascii'))
-            np.savetxt(f, [row], fmt='%4d',delimiter=',')
+    cg_atmlabel = convert_cglabel_to_atmlabel(ncg, atm_cglabel)
+
+    # Write sites
+    filename = "SITE_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
+    print("kmeans> Write final CG sites to ", filename)
+    write_site(filename, cg_atmlabel, ncg, lamb)
