@@ -191,9 +191,12 @@ if __name__ == '__main__':
     # Update CG labels using WCSS
     # WCSS(C) = Cii - 2/S * Cij + 1/S^2 * Cjj
     # initial_wcss: { N_initial X 1 }
-    initial_wcss = []
-    initial_wcss_a = []
-    initial_wcss_b = []
+    initial_wcss_bf = []
+    initial_wcss_af = []
+    initial_wcss_a_bf = []
+    initial_wcss_b_bf = []
+    initial_wcss_a_af = []
+    initial_wcss_b_af = []
     initial_cglabel = []
     initial_converge_count = []
     for index_list in unique_initial_list:
@@ -208,6 +211,15 @@ if __name__ == '__main__':
             exit()
         else:
             atm_cglabel = atm_cglabel_new
+        
+        # Before convergence, calculate residual WCSS
+        cg_wcss_a = calc_residual_wcss(C, ncg, atm_cglabel)
+        cg_wcss_b = calc_residual_wcss(D, ncg, atm_cglabel)
+        initial_wcss_a_bf.append(cg_wcss_a)
+        initial_wcss_b_bf.append(cg_wcss_b)
+        cg_wcss_b = np.multiply(cg_wcss_b, lamb)
+        cg_wcss = np.add(cg_wcss_a, cg_wcss_b)
+        initial_wcss_bf.append(cg_wcss.sum())
         
         # Main iteration: clustering according to WCSS per atom
         for ii in range(999):
@@ -231,11 +243,11 @@ if __name__ == '__main__':
         #print(atm_cglabel)
         cg_wcss_a = calc_residual_wcss(C, ncg, atm_cglabel)
         cg_wcss_b = calc_residual_wcss(D, ncg, atm_cglabel)
-        initial_wcss_a.append(cg_wcss_a)
-        initial_wcss_b.append(cg_wcss_b)
+        initial_wcss_a_af.append(cg_wcss_a)
+        initial_wcss_b_af.append(cg_wcss_b)
         cg_wcss_b = np.multiply(cg_wcss_b, lamb)
         cg_wcss = np.add(cg_wcss_a, cg_wcss_b)
-        initial_wcss.append(cg_wcss.sum())
+        initial_wcss_af.append(cg_wcss.sum())
 
     print("kmeans> Maximum number of iteration is ", str(max(initial_converge_count)))
     print("kmeans> Write iteration counts")
@@ -245,18 +257,25 @@ if __name__ == '__main__':
     print("kmeans> The smallest sum of residual WCSS is MINWCSS=", str(min(initial_wcss)))
     
     # Write WCSS_A per CG_site per initial_set
-    filename = "AWCSS_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
     print("kmeans> Write WCSS_A profile")
-    np.savetxt(filename, initial_wcss_a, fmt="%1.6e")
+    filename = "AWCSS_bf_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
+    np.savetxt(filename, initial_wcss_a_bf, fmt="%1.6e")
+    filename = "AWCSS_af_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
+    np.savetxt(filename, initial_wcss_a_af, fmt="%1.6e")
+    
     # Write WCSS_B per CG_site per initial_set
-    filename = "BWCSS_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
     print("kmeans> Write WCSS_B profile")
-    np.savetxt(filename, initial_wcss_b, fmt="%1.6e")
+    filename = "BWCSS_bf_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
+    np.savetxt(filename, initial_wcss_b_bf, fmt="%1.6e")
+    filename = "BWCSS_af_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
+    np.savetxt(filename, initial_wcss_b_af, fmt="%1.6e")
 
     # Write WCSS per initial set
-    filename = "FWCSS_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
-    print("kmeans> Write a full list of initial guess and final WCSS values to ", filename)
-    write_wcss_per_initial(filename, unique_initial_list, initial_wcss, ncg, lamb)
+    print("kmeans> Write a full list of initial guess and final WCSS values")
+    filename = "FWCSS_bf_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
+    write_wcss_per_initial(filename, unique_initial_list, initial_wcss_bf, ncg, lamb)
+    filename = "FWCSS_af_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
+    write_wcss_per_initial(filename, unique_initial_list, initial_wcss_af, ncg, lamb)
     
     # Find the best CG set (index) according to the smallest WCSS
     index = initial_wcss.index(min(initial_wcss))
