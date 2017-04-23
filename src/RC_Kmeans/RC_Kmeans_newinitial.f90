@@ -1,6 +1,6 @@
 program Kmean
 
-integer,parameter :: K=16, N=725, M=20
+integer,parameter :: K=8, N=115, M=1
 double precision :: lamb = 0 !0
 double precision,parameter :: a = 0.0001 !0.000025
 !double precision :: lamb
