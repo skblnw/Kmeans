@@ -99,15 +99,17 @@ def initialization(F, natm, ncg):
     
     return unique_initial_list
 
-def initialization_normalize(C, D, natm, ncg):
+def initialization_normalize(A, B, natm, ncg):
     # Iniitialization
     initial_list = []
-    range_c = np.amax(C) - np.amin(C)
-    range_d = np.amax(D) - np.amin(D)
-    C = np.subtract(C, np.amin(C))
-    D = np.subtract(D, np.amin(D))
-    C = np.divide(C, range_c)
-    D = np.divide(D, range_d)
+    range_a = np.amax(A) - np.amin(A)
+    range_b = np.amax(B) - np.amin(B)
+    A = np.subtract(A, np.amin(A))
+    B = np.subtract(B, np.amin(B))
+    A = np.divide(A, range_a)
+    B = np.divide(B, range_b)
+    
+    F = A + B
     for atm in range(natm):
         cor = F[atm,:]
         ind = [atm]
@@ -211,8 +213,8 @@ if __name__ == '__main__':
 
     # Iniitialization
     print("kmeans> Initialization starts")
-    unique_initial_list = initialization(F, natm, ncg)
-    #unique_initial_list = initialization_normalize(C, D, natm, ncg)
+    #unique_initial_list = initialization(F, natm, ncg)
+    unique_initial_list = initialization_normalize(A, B, natm, ncg)
     print("kmeans> Initialization finished")
     print("kmeans> ", str(unique_initial_list.shape[0]), " initial sets found!")
 
