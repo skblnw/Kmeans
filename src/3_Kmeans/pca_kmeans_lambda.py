@@ -98,6 +98,33 @@ def initialization(F, natm, ncg):
     unique_initial_list = a[idx]
     
     return unique_initial_list
+
+def initialization_normalize(C, D, natm, ncg):
+    # Iniitialization
+    initial_list = []
+    range_c = np.amax(C) - np.amin(C)
+    range_d = np.amax(D) - np.amin(D)
+    C = np.subtract(C, np.amin(C))
+    D = np.subtract(D, np.amin(D))
+    C = np.divide(C, range_c)
+    D = np.divide(D, range_d)
+    for atm in range(natm):
+        cor = F[atm,:]
+        ind = [atm]
+        for cg in range(ncg-1):
+            tmp = np.where( cor == cor.max() )[0]
+            ind.extend(tmp)
+            cor = np.amin(F[ind,:], axis=0)
+        ind = sorted(ind)
+        initial_list.append(ind)
+
+    # Sort and unique
+    a = np.array(initial_list)
+    b = np.ascontiguousarray(a).view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))
+    _, idx = np.unique(b, return_index=True)
+    unique_initial_list = a[idx]
+    
+    return unique_initial_list
     
 def convert_cglabel_to_atmlabel(ncg, atm_cglabel):
     cg_atmlabel = []
@@ -185,21 +212,41 @@ if __name__ == '__main__':
     # Iniitialization
     print("kmeans> Initialization starts")
     unique_initial_list = initialization(F, natm, ncg)
+    #unique_initial_list = initialization_normalize(C, D, natm, ncg)
     print("kmeans> Initialization finished")
     print("kmeans> ", str(unique_initial_list.shape[0]), " initial sets found!")
+
+    initial_wcss_bf = []
+    initial_wcss_a_bf = []
+    initial_wcss_b_bf = []
+    # Sort the initial list
+    for index_list in unique_initial_list:
+        atm_wcss = F[:,index_list]
+        atm_cglabel = np.argmin(atm_wcss, axis=1)
+
+        # Before convergence, calculate residual WCSS
+        cg_wcss_a = calc_residual_wcss(C, ncg, atm_cglabel)
+        cg_wcss_b = calc_residual_wcss(D, ncg, atm_cglabel)
+        initial_wcss_a_bf.append(cg_wcss_a)
+        initial_wcss_b_bf.append(cg_wcss_b)
+        cg_wcss_b = np.multiply(cg_wcss_b, lamb)
+        cg_wcss = np.add(cg_wcss_a, cg_wcss_b)
+        initial_wcss_bf.append(cg_wcss.sum())
+    index = [i[0] for i in sorted(enumerate(initial_wcss_bf), key=lambda x:x[1])]
+    value = [i[1] for i in sorted(enumerate(initial_wcss_bf), key=lambda x:x[1])]
+    print(index[:10], value[:10])
+    sorted_unique_initial_list = unique_initial_list[index]
+
 
     # Update CG labels using WCSS
     # WCSS(C) = Cii - 2/S * Cij + 1/S^2 * Cjj
     # initial_wcss: { N_initial X 1 }
-    initial_wcss_bf = []
     initial_wcss_af = []
-    initial_wcss_a_bf = []
-    initial_wcss_b_bf = []
     initial_wcss_a_af = []
     initial_wcss_b_af = []
     initial_cglabel = []
     initial_converge_count = []
-    for index_list in unique_initial_list:
+    for index_list in sorted_unique_initial_list[:10]:
         #print(index_list)
         atm_wcss = F[:,index_list]
         
@@ -211,15 +258,6 @@ if __name__ == '__main__':
             exit()
         else:
             atm_cglabel = atm_cglabel_new
-        
-        # Before convergence, calculate residual WCSS
-        cg_wcss_a = calc_residual_wcss(C, ncg, atm_cglabel)
-        cg_wcss_b = calc_residual_wcss(D, ncg, atm_cglabel)
-        initial_wcss_a_bf.append(cg_wcss_a)
-        initial_wcss_b_bf.append(cg_wcss_b)
-        cg_wcss_b = np.multiply(cg_wcss_b, lamb)
-        cg_wcss = np.add(cg_wcss_a, cg_wcss_b)
-        initial_wcss_bf.append(cg_wcss.sum())
         
         # Main iteration: clustering according to WCSS per atom
         for ii in range(999):
@@ -254,7 +292,7 @@ if __name__ == '__main__':
     # Write iteration counts
     filename = "IterCount_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
     np.savetxt(filename, initial_converge_count, fmt='%3d')
-    print("kmeans> The smallest sum of residual WCSS is MINWCSS=", str(min(initial_wcss)))
+    print("kmeans> The smallest sum of residual WCSS is MINWCSS=", str(min(initial_wcss_af)))
     
     # Write WCSS_A per CG_site per initial_set
     print("kmeans> Write WCSS_A profile")
@@ -275,11 +313,11 @@ if __name__ == '__main__':
     filename = "FWCSS_bf_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
     write_wcss_per_initial(filename, unique_initial_list, initial_wcss_bf, ncg, lamb)
     filename = "FWCSS_af_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
-    write_wcss_per_initial(filename, unique_initial_list, initial_wcss_af, ncg, lamb)
+    write_wcss_per_initial(filename, sorted_unique_initial_list[:10], initial_wcss_af, ncg, lamb)
     
     # Find the best CG set (index) according to the smallest WCSS
-    index = initial_wcss.index(min(initial_wcss))
-    atm_cglabel = initial_cglabel[index]
+    index = initial_wcss_af.index(min(initial_wcss_af))
+    tm_cglabel = initial_cglabel[index]
     #print(atm_cglabel)
 
     # Convert cglabel to atmlabel
