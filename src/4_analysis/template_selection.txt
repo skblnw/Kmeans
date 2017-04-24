@@ -1,0 +1,34 @@
+mol representation NewCartoon 0.300000 50.000000 4.100000 0
+mol color ColorID CC
+mol selection {resid SEL}
+mol material AOShiny
+mol addrep top
+mol selupdate NN top 0
+mol colupdate NN top 0
+mol scaleminmax top NN 0.000000 0.000000
+mol smoothrep top NN 0
+mol drawframes top NN {now}
+mol clipplane center 0 NN top {0.0 0.0 0.0}
+mol clipplane color  0 NN top {0.5 0.5 0.5 }
+mol clipplane normal 0 NN top {0.0 0.0 1.0}
+mol clipplane status 0 NN top {0}
+mol clipplane center 1 NN top {0.0 0.0 0.0}
+mol clipplane color  1 NN top {0.5 0.5 0.5 }
+mol clipplane normal 1 NN top {0.0 0.0 1.0}
+mol clipplane status 1 NN top {0}
+mol clipplane center 2 NN top {0.0 0.0 0.0}
+mol clipplane color  2 NN top {0.5 0.5 0.5 }
+mol clipplane normal 2 NN top {0.0 0.0 1.0}
+mol clipplane status 2 NN top {0}
+mol clipplane center 3 NN top {0.0 0.0 0.0}
+mol clipplane color  3 NN top {0.5 0.5 0.5 }
+mol clipplane normal 3 NN top {0.0 0.0 1.0}
+mol clipplane status 3 NN top {0}
+mol clipplane center 4 NN top {0.0 0.0 0.0}
+mol clipplane color  4 NN top {0.5 0.5 0.5 }
+mol clipplane normal 4 NN top {0.0 0.0 1.0}
+mol clipplane status 4 NN top {0}
+mol clipplane center 5 NN top {0.0 0.0 0.0}
+mol clipplane color  5 NN top {0.5 0.5 0.5 }
+mol clipplane normal 5 NN top {0.0 0.0 1.0}
+mol clipplane status 5 NN top {0}
