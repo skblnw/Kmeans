@@ -108,14 +108,14 @@ def convert_cglabel_to_atmlabel(ncg, atm_cglabel):
     
     return cg_atmlabel
     
-def write_wcss_per_initial(filename, unique_initial_list, initial_wcss, ncg, lamb):
+def write_wcss_per_initial(filename, unique_initial_list, initial_wcss, ncg):
     unique_initial_list = np.add(unique_initial_list, 1)
     output_data = np.column_stack((unique_initial_list, np.array(initial_wcss)))
     fmt = ["%4d" for ii in range(ncg)]
     fmt.extend(["%10.6f"])
     np.savetxt(filename, output_data, fmt)
     
-def write_site(filename, cg_atmlabel, ncg, lamb):
+def write_site(filename, cg_atmlabel):
     print("kmeans> Here is the final CG sites:")
     with open(filename, "wb") as f:
         for nn, row in enumerate(cg_atmlabel):
@@ -143,13 +143,11 @@ if __name__ == '__main__':
     parser.add_argument("cod", help="Input covd.dat")
     parser.add_argument("natm", type=int, help="Number of atoms")
     parser.add_argument("ncg", type=int, help="Desired number of CG sites")
-    parser.add_argument("lamb", type=float, help="Value of Lamda")
 
     args = parser.parse_args()
     # Decalre some frequently used variables
     natm = args.natm
     ncg = args.ncg
-    lamb = args.lamb
     print("kmeans> Number of atom (N): ", str(natm), " | Number of CG sites (K): ", str(ncg))
 
     # Read coved.dat
@@ -293,30 +291,30 @@ if __name__ == '__main__':
     print("kmeans> Maximum number of iteration is ", str(max(initial_converge_count)))
     print("kmeans> Write iteration counts")
     # Write iteration counts
-    filename = "IterCount_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
+    filename = "IterCount_cg" + str(ncg) + ".dat"
     np.savetxt(filename, initial_converge_count, fmt='%3d')
     print("kmeans> The smallest sum of residual WCSS is MINWCSS=", str(min(initial_wcss_af)))
     
     # Write WCSS_A per CG_site per initial_set
     print("kmeans> Write WCSS_A profile")
-    filename = "AWCSS_bf_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
+    filename = "AWCSS_bf_cg" + str(ncg) + ".dat"
     np.savetxt(filename, initial_wcss_a_bf, fmt="%1.6e")
-    filename = "AWCSS_af_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
+    filename = "AWCSS_af_cg" + str(ncg) + ".dat"
     np.savetxt(filename, initial_wcss_a_af, fmt="%1.6e")
     
     # Write WCSS_B per CG_site per initial_set
     print("kmeans> Write WCSS_B profile")
-    filename = "BWCSS_bf_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
+    filename = "BWCSS_bf_cg" + str(ncg) + ".dat"
     np.savetxt(filename, initial_wcss_b_bf, fmt="%1.6e")
-    filename = "BWCSS_af_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
+    filename = "BWCSS_af_cg" + str(ncg) + ".dat"
     np.savetxt(filename, initial_wcss_b_af, fmt="%1.6e")
 
     # Write WCSS per initial set
     print("kmeans> Write a full list of initial guess and final WCSS values")
-    filename = "FWCSS_bf_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
-    write_wcss_per_initial(filename, unique_initial_list, initial_wcss_bf, ncg, lamb)
-    filename = "FWCSS_af_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
-    write_wcss_per_initial(filename, sorted_unique_initial_list, initial_wcss_af, ncg, lamb)
+    filename = "FWCSS_bf_cg" + str(ncg) + ".dat"
+    write_wcss_per_initial(filename, unique_initial_list, initial_wcss_bf, ncg)
+    filename = "FWCSS_af_cg" + str(ncg) + ".dat"
+    write_wcss_per_initial(filename, sorted_unique_initial_list, initial_wcss_af, ncg)
     
     # Find the best CG set (index) according to the smallest WCSS
     index = np.argmin(initial_wcss_af)
@@ -328,6 +326,6 @@ if __name__ == '__main__':
     cg_atmlabel = convert_cglabel_to_atmlabel(ncg, atm_cglabel)
 
     # Write sites
-    filename = "SITE_cg" + str(ncg) + "_lamb" + str(lamb) + ".dat"
+    filename = "SITE_cg" + str(ncg) + ".dat"
     print("kmeans> Write final CG sites to ", filename)
-    write_site(filename, cg_atmlabel, ncg, lamb)
+    write_site(filename, cg_atmlabel)
