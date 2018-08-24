@@ -1,0 +1,4 @@
+set sel [atomselect top {protein and resid SEL}]
+set com [center_of_mass $sel]
+draw color COLOR
+draw sphere $com radius 2

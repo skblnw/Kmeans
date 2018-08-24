@@ -1,7 +1,7 @@
 mol representation NewCartoon 0.300000 50.000000 4.100000 0
 mol color ColorID CC
-mol selection {resid SEL}
-mol material AOShiny
+mol selection {protein and resid SEL}
+mol material BlownGlass
 mol addrep top
 mol selupdate NN top 0
 mol colupdate NN top 0
